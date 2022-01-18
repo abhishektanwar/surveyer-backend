@@ -18,7 +18,7 @@ passport.deserializeUser((id, done) => {
       done(null, user)
     })
 })
-passport.use(new googleStrategy({ clientID: keys.googleClientID, clientSecret: keys.googleClientSecret, callbackURL: '/auth/google/callback' }, (accessToken, refreshToken, profile, done) => {
+passport.use(new googleStrategy({ clientID: keys.googleClientID, clientSecret: keys.googleClientSecret, callbackURL: '/auth/google/callback', proxy: true }, async (accessToken, refreshToken, profile, done) => {
   // console.log("access", accessToken)
   // console.log("refresh", refreshToken)
   // console.log("profile", profile)
@@ -29,19 +29,16 @@ passport.use(new googleStrategy({ clientID: keys.googleClientID, clientSecret: k
 
 
   // check if this user id exists in db ,if not save to db
-  User.findOne({ googleId: profile.id })
-    .then((existingUser) => {
-      if (existingUser) {
-        // we already have a record with the iven profile ID
-        done(null, existingUser);
-      } else {
-        // we dont have a user record with this id , create new record
-        new User({ googleId: profile.id }).save()
-          .then(user => {
-            done(null, user);
-          })
-      }
-    })
+  const existingUser = await User.findOne({ googleId: profile.id })
+
+  if (existingUser) {
+    // we already have a record with the iven profile ID
+    return done(null, existingUser);
+  }
+  // we dont have a user record with this id , create new record
+  const newUser = await new User({ googleId: profile.id }).save()
+
+  done(null, newUser);
   // creating a new instance of user in users collection
 
 
